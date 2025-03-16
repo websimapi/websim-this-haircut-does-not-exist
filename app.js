@@ -337,11 +337,11 @@ const App = () => {
                 console.log('Remix source haircut data:', remixSourceHaircut);
             }
             
-            let systemPrompt = "You are a professional hair stylist with expertise in describing haircuts and styles. Given an image of a drawn haircut or abstract shape, describe what this would look like as an actual haircut in concise but precise detail. Focus especially on color specifics, length, texture, and distinctive features. Be accurate and avoid overcomplication. Keep your description clear and detailed without unnecessary elaboration.";
+            let systemPrompt = "You are a professional hair stylist with expertise in describing haircuts and styles. Given an image of a drawn haircut or abstract shape, describe what this would look like as an actual haircut in concise but precise detail. Focus especially on the shape, silhouette, and structural elements of the hair. Describe length variations, layering, and how the hair falls or is styled. Be specific about color specifics, texture, and distinctive features. Be accurate and avoid overcomplication. Keep your description clear and detailed without unnecessary elaboration.";
             let userPrompt = [
                 {
                     type: "text",
-                    text: "Describe this drawing as if it were a haircut or hairstyle. Be precise about color details and structural elements. If it's abstract, interpret what haircut it might represent. Keep your description concise but comprehensive."
+                    text: "Describe this drawing as if it were a haircut or hairstyle. Be precise about the shape, structure, and silhouette of the hair. Include specific details about color and how the haircut would be structured in real life. If it's abstract, interpret what haircut it might represent. Keep your description concise but comprehensive."
                 },
                 {
                     type: "image_url",
@@ -351,12 +351,12 @@ const App = () => {
             
             // If we're remixing, use a simplified prompt that focuses primarily on the new drawing
             if (isRemixing && remixSourceHaircut) {
-                systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs. Focus primarily on the drawn image to create a detailed haircut description with precise color specifications and structural elements. Be concise but accurate, avoiding unnecessary elaboration.";
+                systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs. Focus primarily on the drawn image to create a detailed haircut description with precise shape specifications, structural elements, and color details. Pay special attention to the silhouette, layering, and overall form of the hair. Be concise but accurate, avoiding unnecessary elaboration.";
                 
                 userPrompt = [
                     {
                         type: "text",
-                        text: `I'm creating a new haircut based on this drawing. Please analyze the image and describe what this would look like as an actual haircut, with special attention to color details and precise styling elements.
+                        text: `I'm creating a new haircut based on this drawing. Please analyze the image and describe what this would look like as an actual haircut, with special attention to the shape and structure of the hair. Include details on silhouette, layers, length variations, and precise color specifications.
                         
                         Note: This is a remix of a previous haircut which had this description: "${remixSourceHaircut.description}".
                         
