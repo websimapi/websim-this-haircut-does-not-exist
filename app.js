@@ -178,10 +178,13 @@ const App = () => {
             if (isRemixing && remixSourceHaircut) {
                 systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs based on iterations of previous styles. You excel at identifying how a drawing should influence changes to an existing haircut.";
                 
+                // Include parent description regardless of whether it's a remix of a remix
+                const originalDescription = remixSourceHaircut.description;
+                
                 userPrompt = [
                     {
                         type: "text",
-                        text: `I'm remixing a haircut. Here is the DESCRIPTION of the original haircut: "${remixSourceHaircut.description}". 
+                        text: `I'm remixing a haircut. Here is the DESCRIPTION of the original haircut: "${originalDescription}". 
                         
                         I've now drawn some changes to this haircut, which you can see in the attached image. Please create a detailed description of what this new remixed haircut should look like, incorporating elements from both the new drawing and the existing haircut description. Be specific about what elements are changing and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features.`
                     },
@@ -252,8 +255,8 @@ const App = () => {
                 console.log('Adding remix information to record');
                 haircutData.isRemix = true;
                 haircutData.parentId = remixSourceHaircut.id;
-                haircutData.originalDrawingUrl = remixSourceHaircut.drawingUrl;
-                haircutData.originalHaircutUrl = remixSourceHaircut.haircutUrl;
+                haircutData.originalDrawingUrl = remixSourceHaircut.isRemix ? remixSourceHaircut.originalDrawingUrl : remixSourceHaircut.drawingUrl;
+                haircutData.originalHaircutUrl = remixSourceHaircut.isRemix ? remixSourceHaircut.originalHaircutUrl : remixSourceHaircut.haircutUrl;
             }
             
             console.log('Creating haircut record with data:', haircutData);
@@ -314,7 +317,12 @@ const App = () => {
             
             setDrawingVectors(vectors);
             setIsRemixing(true);
-            setRemixSourceHaircut(haircut);
+            setRemixSourceHaircut({
+                ...haircut,
+                // Ensure we keep the most relevant parent haircut for remixes of remixes
+                originalDrawingUrl: haircut.isRemix ? haircut.originalDrawingUrl : haircut.drawingUrl,
+                originalHaircutUrl: haircut.isRemix ? haircut.originalHaircutUrl : haircut.haircutUrl
+            });
             setActiveTab('draw');
             setSelectedHaircut(null);
             setDescription('');
