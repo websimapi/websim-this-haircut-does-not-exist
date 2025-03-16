@@ -16,7 +16,8 @@ const App = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedHaircut, setSelectedHaircut] = useState(null);
-    const [drawingData, setDrawingData] = useState([]);
+    const [drawingVectors, setDrawingVectors] = useState([]);
+    const [isRemixing, setIsRemixing] = useState(false);
     
     const canvasRef = useRef(null);
     const contextRef = useRef(null);
@@ -40,7 +41,12 @@ const App = () => {
         
         context.fillStyle = 'white';
         context.fillRect(0, 0, canvas.width, canvas.height);
-    }, []);
+        
+        // If we're remixing, redraw the previous vectors
+        if (isRemixing && drawingVectors.length > 0) {
+            redrawVectors();
+        }
+    }, [isRemixing]);
 
     useEffect(() => {
         if (contextRef.current) {
@@ -63,13 +69,15 @@ const App = () => {
         contextRef.current.moveTo(x, y);
         setIsDrawing(true);
         
-        // Start a new stroke in the drawing data
-        setDrawingData(prev => [...prev, {
-            type: 'stroke',
-            color: selectedColor,
-            width: brushSize,
-            points: [{x, y}]
-        }]);
+        // Start a new vector
+        setDrawingVectors(prev => [
+            ...prev, 
+            {
+                points: [{x, y}],
+                color: selectedColor,
+                size: brushSize
+            }
+        ]);
     };
 
     const draw = ({ nativeEvent }) => {
@@ -86,14 +94,12 @@ const App = () => {
         contextRef.current.lineTo(x, y);
         contextRef.current.stroke();
         
-        // Add point to the current stroke
-        setDrawingData(prev => {
-            const newData = [...prev];
-            const currentStrokeIndex = newData.length - 1;
-            if (currentStrokeIndex >= 0) {
-                newData[currentStrokeIndex].points.push({x, y});
-            }
-            return newData;
+        // Add point to the current vector
+        setDrawingVectors(prev => {
+            const updatedVectors = [...prev];
+            const currentVector = updatedVectors[updatedVectors.length - 1];
+            currentVector.points.push({x, y});
+            return updatedVectors;
         });
     };
 
@@ -109,7 +115,34 @@ const App = () => {
         context.fillRect(0, 0, canvas.width, canvas.height);
         setDescription('');
         setGeneratedImageUrl('');
-        setDrawingData([]);
+        setDrawingVectors([]);
+        setIsRemixing(false);
+    };
+
+    const redrawVectors = () => {
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        
+        // Clear canvas first
+        context.fillStyle = 'white';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Redraw all vectors
+        drawingVectors.forEach(vector => {
+            if (vector.points.length < 2) return;
+            
+            context.beginPath();
+            context.strokeStyle = vector.color;
+            context.lineWidth = vector.size;
+            
+            context.moveTo(vector.points[0].x, vector.points[0].y);
+            
+            for (let i = 1; i < vector.points.length; i++) {
+                context.lineTo(vector.points[i].x, vector.points[i].y);
+            }
+            
+            context.stroke();
+        });
     };
 
     const analyzeAndGenerateHaircut = async () => {
@@ -153,11 +186,17 @@ const App = () => {
             
             setGeneratedImageUrl(result.url);
             
-            // Store the vector drawing data instead of image
+            const drawingDataUrl = canvas.toDataURL('image/jpeg');
+            
+            const drawingUrl = await websim.upload(
+                dataURLtoFile(drawingDataUrl, 'drawing.jpg')
+            );
+            
             await room.collection('haircut').create({
                 description: completion.content,
-                drawingData: drawingData,
-                haircutUrl: result.url
+                drawingUrl,
+                haircutUrl: result.url,
+                vectors: JSON.stringify(drawingVectors)
             });
             
         } catch (error) {
@@ -169,7 +208,7 @@ const App = () => {
             setIsProcessing(false);
         }
     };
-    
+
     const dataURLtoFile = (dataurl, filename) => {
         const arr = dataurl.split(',');
         const mime = arr[0].match(/:(.*?);/)[1];
@@ -195,71 +234,19 @@ const App = () => {
         setSelectedHaircut(null);
     };
 
-    // Function to render drawing data onto a canvas
-    const renderDrawingData = (context, data) => {
-        // Clear canvas first
-        context.fillStyle = 'white';
-        context.fillRect(0, 0, context.canvas.width, context.canvas.height);
-        
-        // Render each stroke at original scale (no scaling adjustments)
-        data.forEach(stroke => {
-            if (stroke.type === 'stroke' && stroke.points.length > 0) {
-                context.beginPath();
-                context.strokeStyle = stroke.color;
-                context.lineWidth = stroke.width;
-                context.lineCap = 'round';
-                
-                // Move to first point
-                const firstPoint = stroke.points[0];
-                context.moveTo(firstPoint.x, firstPoint.y);
-                
-                // Draw lines to all other points
-                for (let i = 1; i < stroke.points.length; i++) {
-                    const point = stroke.points[i];
-                    context.lineTo(point.x, point.y);
-                }
-                
-                context.stroke();
-            }
-        });
-    };
-
-    const remixHaircut = async (haircut, e) => {
-        e.stopPropagation(); // Prevent opening the modal
-        
-        // Switch to the draw tab
-        setActiveTab('draw');
-        
-        // Wait for React to update the DOM
-        setTimeout(() => {
-            // Now canvas should be accessible
-            const canvas = canvasRef.current;
-            if (!canvas) return;
-            
-            const context = canvas.getContext('2d');
-            
-            // Clear the current drawing and description
-            clearCanvas();
-            
-            // Load the vector drawing data
-            if (haircut.drawingData && haircut.drawingData.length > 0) {
-                renderDrawingData(context, haircut.drawingData);
-                setDrawingData(haircut.drawingData);
-                
-                // Make sure context is properly set for future drawing
-                context.strokeStyle = selectedColor;
-                context.lineWidth = brushSize;
-                context.lineCap = 'round';
-            } else if (haircut.drawingUrl) {
-                // Fallback for old data that only has image URL
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                img.onload = () => {
-                    context.drawImage(img, 0, 0, canvas.width, canvas.height);
-                };
-                img.src = haircut.drawingUrl;
-            }
-        }, 100);
+    const remixHaircut = (haircut) => {
+        try {
+            const vectors = JSON.parse(haircut.vectors || '[]');
+            setDrawingVectors(vectors);
+            setIsRemixing(true);
+            setActiveTab('draw');
+            setSelectedHaircut(null);
+            setDescription('');
+            setGeneratedImageUrl('');
+        } catch (error) {
+            console.error('Error remixing haircut:', error);
+            alert('Sorry, this haircut cannot be remixed.');
+        }
     };
 
     return (
@@ -390,22 +377,25 @@ const App = () => {
                         <div 
                             key={haircut.id} 
                             className="gallery-item"
-                            onClick={() => openHaircutModal(haircut)}
                         >
-                            <img src={haircut.haircutUrl} alt="Generated haircut" />
+                            <img 
+                                src={haircut.haircutUrl} 
+                                alt="Generated haircut" 
+                                onClick={() => openHaircutModal(haircut)}
+                            />
                             <div className="content">
                                 <div className="description-preview">
                                     {haircut.description.substring(0, 100)}...
                                 </div>
-                                <div className="button-row">
+                                <div className="gallery-actions">
                                     <div className="date">
                                         {new Date(haircut.created_at).toLocaleDateString()}
                                     </div>
                                     <button 
-                                        className="remix-btn" 
-                                        onClick={(e) => remixHaircut(haircut, e)}
+                                        className="remix-gallery-btn"
+                                        onClick={() => remixHaircut(haircut)}
                                     >
-                                        <i className="fas fa-sync-alt"></i> Remix
+                                        <i className="fas fa-remix"></i> Remix
                                     </button>
                                 </div>
                             </div>
@@ -446,6 +436,12 @@ const App = () => {
                             <div className="meta">
                                 <p><i className="fas fa-user"></i> Created by: {selectedHaircut.username}</p>
                                 <p><i className="fas fa-calendar-alt"></i> Date: {new Date(selectedHaircut.created_at).toLocaleString()}</p>
+                                <button 
+                                    className="remix-btn" 
+                                    onClick={() => remixHaircut(selectedHaircut)}
+                                >
+                                    <i className="fas fa-remix"></i> Remix this Haircut
+                                </button>
                             </div>
                         </div>
                     </div>

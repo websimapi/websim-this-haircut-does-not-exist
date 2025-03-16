@@ -212,6 +212,40 @@ body {
     cursor: not-allowed;
 }
 
+.remix-btn, .remix-gallery-btn {
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-top: 15px;
+}
+
+.remix-btn:hover, .remix-gallery-btn:hover {
+    box-shadow: 0 4px 12px rgba(110, 142, 251, 0.4);
+    transform: translateY(-2px);
+}
+
+.remix-gallery-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    margin-top: 0;
+}
+
+.gallery-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
 .spinner-small {
     display: inline-block;
     width: 16px;
@@ -316,31 +350,6 @@ body {
 
 .gallery-item .content {
     padding: 20px;
-}
-
-.gallery-item .button-row {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 10px;
-}
-
-.remix-btn {
-    background: linear-gradient(135deg, #6e8efb, #a777e3);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.2s ease;
-}
-
-.remix-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 3px 8px rgba(110, 142, 251, 0.3);
 }
 
 .gallery-item .description-preview {
