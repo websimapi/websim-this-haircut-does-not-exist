@@ -21,7 +21,6 @@ const App = () => {
     const [remixSourceHaircut, setRemixSourceHaircut] = useState(null);
     const [selectedHaircut, setSelectedHaircut] = useState(null);
     const [drawingVectors, setDrawingVectors] = useState([]);
-    const [initializedCanvas, setInitializedCanvas] = useState(false);
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState('#000000');
     
@@ -50,22 +49,12 @@ const App = () => {
             context.fillStyle = 'white';
             context.fillRect(0, 0, canvas.width, canvas.height);
             
-            // If we have vectors and canvas is ready, redraw them
+            // If we have vectors, redraw them
             if (drawingVectors.length > 0) {
-                console.log('Redrawing vectors on canvas initialization', drawingVectors.length);
                 redrawVectors();
-                setInitializedCanvas(true);
             }
         }
-    }, [activeTab]);
-
-    useEffect(() => {
-        if (contextRef.current && drawingVectors.length > 0 && !initializedCanvas) {
-            console.log('Redrawing vectors after vectors changed', drawingVectors.length);
-            redrawVectors();
-            setInitializedCanvas(true);
-        }
-    }, [drawingVectors]);
+    }, [activeTab, isRemixing]);
 
     useEffect(() => {
         if (contextRef.current) {
@@ -364,9 +353,6 @@ const App = () => {
             
             const vectors = JSON.parse(haircut.vectors || '[]');
             console.log('Parsed vectors data:', vectors);
-            
-            // Reset initialization state
-            setInitializedCanvas(false);
             
             // Wait for state updates to complete before continuing
             setTimeout(() => {
