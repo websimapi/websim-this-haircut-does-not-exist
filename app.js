@@ -378,6 +378,26 @@ const App = () => {
         }
     };
 
+    const reloadRemix = () => {
+        console.log('Reloading remix...');
+        if (remixSourceHaircut && remixSourceHaircut.vectors) {
+            try {
+                const vectors = JSON.parse(remixSourceHaircut.vectors || '[]');
+                setDrawingVectors(vectors);
+                // Force redraw
+                setTimeout(() => {
+                    redrawVectors();
+                    console.log('Canvas redrawn with vectors for remixing');
+                }, 100);
+            } catch (error) {
+                console.error('Error reloading remix:', error);
+                alert('Failed to reload remix: ' + error.message);
+            }
+        } else {
+            alert('No remix data available to reload');
+        }
+    };
+
     return (
         <div className="container">
             <div className="header">
@@ -481,6 +501,9 @@ const App = () => {
                                         <p>Original Haircut</p>
                                     </div>
                                 </div>
+                                <button onClick={reloadRemix} className="reload-remix-btn">
+                                    <i className="fas fa-sync-alt"></i> Reload Remix
+                                </button>
                             </div>
                         )}
                         
