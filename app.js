@@ -23,6 +23,7 @@ const App = () => {
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState('#000000');
     const [currentTool, setCurrentTool] = useState('brush');
+    const [selectedHaircut, setSelectedHaircut] = useState(null);
 
     const canvasRef = useRef(null);
     const contextRef = useRef(null);
