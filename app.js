@@ -36,7 +36,6 @@ const App = () => {
         context.lineWidth = brushSize;
         contextRef.current = context;
         
-        // Clear canvas to white
         context.fillStyle = 'white';
         context.fillRect(0, 0, canvas.width, canvas.height);
     }, []);
@@ -48,16 +47,16 @@ const App = () => {
         }
     }, [selectedColor, brushSize]);
 
-    const getMousePos = (canvas, evt) => {
-        const rect = canvas.getBoundingClientRect();
-        return {
-            x: evt.clientX - rect.left,
-            y: evt.clientY - rect.top
-        };
-    };
-
     const startDrawing = ({ nativeEvent }) => {
-        const { x, y } = getMousePos(canvasRef.current, nativeEvent);
+        const { offsetX, offsetY } = nativeEvent;
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const x = (offsetX) * scaleX;
+        const y = (offsetY) * scaleY;
+        
         contextRef.current.beginPath();
         contextRef.current.moveTo(x, y);
         setIsDrawing(true);
@@ -65,7 +64,15 @@ const App = () => {
 
     const draw = ({ nativeEvent }) => {
         if (!isDrawing) return;
-        const { x, y } = getMousePos(canvasRef.current, nativeEvent);
+        const { offsetX, offsetY } = nativeEvent;
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const x = (offsetX) * scaleX;
+        const y = (offsetY) * scaleY;
+        
         contextRef.current.lineTo(x, y);
         contextRef.current.stroke();
     };
@@ -133,16 +140,13 @@ const App = () => {
             
             setGeneratedImageUrl(result.url);
             
-            // Save to database
             const canvas = canvasRef.current;
             const drawingDataUrl = canvas.toDataURL('image/jpeg');
             
-            // Upload drawing to get a permanent URL
             const drawingUrl = await websim.upload(
                 dataURLtoFile(drawingDataUrl, 'drawing.jpg')
             );
             
-            // Save to collection
             await room.collection('haircut').create({
                 description,
                 drawingUrl,
@@ -157,7 +161,6 @@ const App = () => {
         }
     };
     
-    // Helper function to convert data URL to File object
     const dataURLtoFile = (dataurl, filename) => {
         const arr = dataurl.split(',');
         const mime = arr[0].match(/:(.*?);/)[1];
@@ -195,87 +198,114 @@ const App = () => {
                     className={`tab ${activeTab === 'draw' ? 'active' : ''}`}
                     onClick={() => setActiveTab('draw')}
                 >
-                    Create
+                    <i className="fas fa-paint-brush"></i> Create
                 </button>
                 <button 
                     className={`tab ${activeTab === 'gallery' ? 'active' : ''}`}
                     onClick={() => setActiveTab('gallery')}
                 >
-                    Gallery
+                    <i className="fas fa-images"></i> Gallery
                 </button>
             </div>
             
             {activeTab === 'draw' && (
                 <>
                     <div className="drawing-container">
-                        <div className="canvas-wrapper">
-                            <canvas
-                                ref={canvasRef}
-                                onMouseDown={startDrawing}
-                                onMouseMove={draw}
-                                onMouseUp={stopDrawing}
-                                onMouseLeave={stopDrawing}
-                            />
+                        <div className="title-section">
+                            <h2>Draw Your Haircut</h2>
+                            <p>Use your imagination to create a unique hairstyle!</p>
                         </div>
                         
-                        <div className="tools">
-                            <button onClick={clearCanvas}>Clear</button>
+                        <div className="canvas-controls">
+                            <div className="tools-panel">
+                                <div className="brush-controls">
+                                    <label htmlFor="size">Brush Size: {brushSize}px</label>
+                                    <input
+                                        type="range"
+                                        id="size"
+                                        className="size-slider"
+                                        min="1"
+                                        max="50"
+                                        value={brushSize}
+                                        onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                                    />
+                                </div>
+                                <div className="color-picker">
+                                    {colorOptions.map(color => (
+                                        <div
+                                            key={color}
+                                            className={`color-option ${selectedColor === color ? 'selected' : ''}`}
+                                            style={{ backgroundColor: color }}
+                                            onClick={() => setSelectedColor(color)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        
+                            <div className="canvas-wrapper">
+                                <canvas
+                                    ref={canvasRef}
+                                    onMouseDown={startDrawing}
+                                    onMouseMove={draw}
+                                    onMouseUp={stopDrawing}
+                                    onMouseLeave={stopDrawing}
+                                    style={{ 
+                                        width: '100%', 
+                                        height: '400px',
+                                        cursor: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='${brushSize}' width='${brushSize}'%3E%3Ccircle cx='${brushSize/2}' cy='${brushSize/2}' r='${brushSize/2}' fill='${encodeURIComponent(selectedColor)}'/%3E%3C/svg%3E") ${brushSize/2} ${brushSize/2}, crosshair`
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="action-buttons">
+                            <button onClick={clearCanvas} className="clear-btn">
+                                <i className="fas fa-trash-alt"></i> Clear
+                            </button>
                             <button 
                                 onClick={analyzeDrawing}
                                 disabled={isAnalyzing}
+                                className="analyze-btn"
                             >
+                                {isAnalyzing ? <span className="spinner-small"></span> : <i className="fas fa-magic"></i>} 
                                 {isAnalyzing ? 'Analyzing...' : 'Analyze Drawing'}
                             </button>
                             <button 
                                 onClick={generateHaircutImage}
                                 disabled={!description || isGenerating}
+                                className="generate-btn"
                             >
+                                {isGenerating ? <span className="spinner-small"></span> : <i className="fas fa-image"></i>} 
                                 {isGenerating ? 'Generating...' : 'Generate Haircut'}
                             </button>
-                        </div>
-                        
-                        <div className="color-picker">
-                            {colorOptions.map(color => (
-                                <div
-                                    key={color}
-                                    className={`color-option ${selectedColor === color ? 'selected' : ''}`}
-                                    style={{ backgroundColor: color }}
-                                    onClick={() => setSelectedColor(color)}
-                                />
-                            ))}
-                        </div>
-                        
-                        <div>
-                            <label htmlFor="size">Brush Size: {brushSize}</label>
-                            <input
-                                type="range"
-                                id="size"
-                                className="size-slider"
-                                min="1"
-                                max="50"
-                                value={brushSize}
-                                onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                            />
                         </div>
                     </div>
                     
                     {description && (
                         <div className="result-container">
-                            <h2>Haircut Description</h2>
-                            <div className="description">
-                                {description}
-                            </div>
+                            <h2>Your Haircut</h2>
                             
-                            {generatedImageUrl && (
-                                <>
-                                    <h2>Generated Haircut</h2>
-                                    <img 
-                                        src={generatedImageUrl} 
-                                        alt="Generated haircut" 
-                                        className="generated-image" 
-                                    />
-                                </>
-                            )}
+                            <div className="result-columns">
+                                <div className="description-column">
+                                    <h3>Description</h3>
+                                    <div className="description">
+                                        {description}
+                                    </div>
+                                </div>
+                                
+                                {generatedImageUrl && (
+                                    <div className="image-column">
+                                        <h3>Generated Haircut</h3>
+                                        <div className="image-wrapper">
+                                            <img 
+                                                src={generatedImageUrl} 
+                                                alt="Generated haircut" 
+                                                className="generated-image" 
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </>
@@ -312,23 +342,29 @@ const App = () => {
                         </div>
                         <div className="modal-body">
                             <div className="modal-images">
-                                <img 
-                                    src={selectedHaircut.drawingUrl} 
-                                    alt="Original drawing" 
-                                    className="drawing"
-                                />
-                                <img 
-                                    src={selectedHaircut.haircutUrl} 
-                                    alt="Generated haircut" 
-                                />
+                                <div className="image-card">
+                                    <h3>Original Drawing</h3>
+                                    <img 
+                                        src={selectedHaircut.drawingUrl} 
+                                        alt="Original drawing" 
+                                        className="drawing"
+                                    />
+                                </div>
+                                <div className="image-card">
+                                    <h3>Generated Haircut</h3>
+                                    <img 
+                                        src={selectedHaircut.haircutUrl} 
+                                        alt="Generated haircut" 
+                                    />
+                                </div>
                             </div>
                             <div className="description">
                                 <h3>Description</h3>
                                 <p>{selectedHaircut.description}</p>
                             </div>
                             <div className="meta">
-                                <p>Created by: {selectedHaircut.username}</p>
-                                <p>Date: {new Date(selectedHaircut.created_at).toLocaleString()}</p>
+                                <p><i className="fas fa-user"></i> Created by: {selectedHaircut.username}</p>
+                                <p><i className="fas fa-calendar-alt"></i> Date: {new Date(selectedHaircut.created_at).toLocaleString()}</p>
                             </div>
                         </div>
                     </div>
