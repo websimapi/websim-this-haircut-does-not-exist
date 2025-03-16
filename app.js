@@ -186,20 +186,20 @@ const App = () => {
         // Switch to the draw tab
         setActiveTab('draw');
         
+        // First, ensure canvas is properly initialized
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        
         // Clear the current drawing and description
-        clearCanvas();
+        context.fillStyle = 'white';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        setDescription('');
+        setGeneratedImageUrl('');
         
         // Create a temporary image to load the drawing
         const img = new Image();
         img.crossOrigin = 'Anonymous';
         img.onload = () => {
-            const canvas = canvasRef.current;
-            const context = canvas.getContext('2d');
-            
-            // Clear canvas first
-            context.fillStyle = 'white';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            
             // Draw the loaded image, fitting it to the canvas
             context.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
