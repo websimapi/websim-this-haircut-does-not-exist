@@ -18,6 +18,7 @@ const App = () => {
     const [selectedHaircut, setSelectedHaircut] = useState(null);
     const [drawingVectors, setDrawingVectors] = useState([]);
     const [isRemixing, setIsRemixing] = useState(false);
+    const [remixSourceHaircut, setRemixSourceHaircut] = useState(null);
     
     const canvasRef = useRef(null);
     const contextRef = useRef(null);
@@ -117,6 +118,7 @@ const App = () => {
         setGeneratedImageUrl('');
         setDrawingVectors([]);
         setIsRemixing(false);
+        setRemixSourceHaircut(null);
     };
 
     const redrawVectors = () => {
@@ -152,6 +154,35 @@ const App = () => {
             const canvas = canvasRef.current;
             const imageDataUrl = canvas.toDataURL('image/jpeg');
             
+            let promptContent = [
+                {
+                    type: "text",
+                    text: "Describe this drawing as if it were a haircut or hairstyle. Be detailed and creative. If it's abstract, interpret what haircut it might represent."
+                },
+                {
+                    type: "image_url",
+                    image_url: { url: imageDataUrl }
+                }
+            ];
+            
+            // If we're remixing, include the previous haircut image for context
+            if (isRemixing && remixSourceHaircut) {
+                promptContent = [
+                    {
+                        type: "text",
+                        text: "I'm showing you two images: 1) A drawing of a haircut and 2) A previously generated haircut based on an earlier version of this drawing. The first image is a new iteration or modification of the drawing that led to the second image. Please analyze both images and create a detailed description of what this new haircut should look like, incorporating elements from both the drawing and the previous haircut. Be creative and detailed, focusing on length, texture, color, styling techniques, and distinctive features."
+                    },
+                    {
+                        type: "image_url",
+                        image_url: { url: imageDataUrl }
+                    },
+                    {
+                        type: "image_url",
+                        image_url: { url: remixSourceHaircut.haircutUrl }
+                    }
+                ];
+            }
+            
             const completion = await websim.chat.completions.create({
                 messages: [
                     {
@@ -160,16 +191,7 @@ const App = () => {
                     },
                     {
                         role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: "Describe this drawing as if it were a haircut or hairstyle. Be detailed and creative. If it's abstract, interpret what haircut it might represent."
-                            },
-                            {
-                                type: "image_url",
-                                image_url: { url: imageDataUrl }
-                            }
-                        ]
+                        content: promptContent
                     }
                 ]
             });
@@ -192,12 +214,23 @@ const App = () => {
                 dataURLtoFile(drawingDataUrl, 'drawing.jpg')
             );
             
-            await room.collection('haircut').create({
+            // Create new haircut record with remix history if applicable
+            let haircutData = {
                 description: completion.content,
                 drawingUrl,
                 haircutUrl: result.url,
                 vectors: JSON.stringify(drawingVectors)
-            });
+            };
+            
+            // If this is a remix, include the parent haircut info
+            if (isRemixing && remixSourceHaircut) {
+                haircutData.isRemix = true;
+                haircutData.parentId = remixSourceHaircut.id;
+                haircutData.originalDrawingUrl = remixSourceHaircut.drawingUrl;
+                haircutData.originalHaircutUrl = remixSourceHaircut.haircutUrl;
+            }
+            
+            await room.collection('haircut').create(haircutData);
             
         } catch (error) {
             console.error('Error processing haircut:', error);
@@ -239,6 +272,7 @@ const App = () => {
             const vectors = JSON.parse(haircut.vectors || '[]');
             setDrawingVectors(vectors);
             setIsRemixing(true);
+            setRemixSourceHaircut(haircut);
             setActiveTab('draw');
             setSelectedHaircut(null);
             setDescription('');
@@ -320,6 +354,22 @@ const App = () => {
                                 />
                             </div>
                         </div>
+                        
+                        {isRemixing && remixSourceHaircut && (
+                            <div className="remix-info">
+                                <h3>Remixing Haircut</h3>
+                                <div className="remix-images">
+                                    <div className="remix-image">
+                                        <img src={remixSourceHaircut.drawingUrl} alt="Original drawing" />
+                                        <p>Original Drawing</p>
+                                    </div>
+                                    <div className="remix-image">
+                                        <img src={remixSourceHaircut.haircutUrl} alt="Original haircut" />
+                                        <p>Original Haircut</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         
                         <div className="action-buttons">
                             <button onClick={clearCanvas} className="clear-btn">
@@ -429,6 +479,28 @@ const App = () => {
                                     />
                                 </div>
                             </div>
+                            {selectedHaircut.isRemix && (
+                                <div className="remix-history">
+                                    <h3>Remix History</h3>
+                                    <div className="modal-images">
+                                        <div className="image-card">
+                                            <h3>Parent Drawing</h3>
+                                            <img 
+                                                src={selectedHaircut.originalDrawingUrl} 
+                                                alt="Parent drawing" 
+                                                className="drawing"
+                                            />
+                                        </div>
+                                        <div className="image-card">
+                                            <h3>Parent Haircut</h3>
+                                            <img 
+                                                src={selectedHaircut.originalHaircutUrl} 
+                                                alt="Parent haircut" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             <div className="description">
                                 <h3>Description</h3>
                                 <p>{selectedHaircut.description}</p>
