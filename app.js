@@ -19,7 +19,6 @@ const App = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isRemixing, setIsRemixing] = useState(false);
     const [remixSourceHaircut, setRemixSourceHaircut] = useState(null);
-    const [selectedHaircut, setSelectedHaircut] = useState(null);
     const [drawingVectors, setDrawingVectors] = useState([]);
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState('#000000');
@@ -100,38 +99,62 @@ const App = () => {
         const width = canvas.width;
         const height = canvas.height;
         
+        // Ensure coordinates are within bounds
+        startX = Math.max(0, Math.min(Math.floor(startX), width - 1));
+        startY = Math.max(0, Math.min(Math.floor(startY), height - 1));
+        
         // Get the color we're filling
         const targetColor = getColorAt(imageData, startX, startY);
         
         // Don't fill if target color is the same as fill color
-        if (colorsMatch(targetColor, hexToRgb(fillColor))) {
+        const rgbFillColor = hexToRgb(fillColor);
+        if (colorsMatch(targetColor, rgbFillColor)) {
             return;
         }
         
         // Stack for flood fill algorithm (x, y coordinates)
         const stack = [{x: startX, y: startY}];
+        const maxStackSize = width * height; // Safety limit
+        const visited = new Set(); // Track visited pixels
+        const pixelKey = (x, y) => `${x},${y}`;
         
-        while (stack.length > 0) {
+        let iterations = 0;
+        const maxIterations = width * height; // Safety limit
+        
+        while (stack.length > 0 && iterations < maxIterations) {
+            iterations++;
             const {x, y} = stack.pop();
+            const key = pixelKey(x, y);
+            
+            // Skip already visited pixels
+            if (visited.has(key)) continue;
+            visited.add(key);
+            
+            // Skip if out of bounds
+            if (x < 0 || y < 0 || x >= width || y >= height) {
+                continue;
+            }
+            
             const currentIndex = (y * width + x) * 4;
             
-            // Skip if out of bounds or if the color doesn't match target
-            if (x < 0 || y < 0 || x >= width || y >= height || 
-                !colorsMatch([data[currentIndex], data[currentIndex + 1], data[currentIndex + 2], data[currentIndex + 3]], targetColor)) {
+            // Skip if the color doesn't match target
+            if (!colorsMatch([data[currentIndex], data[currentIndex + 1], data[currentIndex + 2], data[currentIndex + 3]], targetColor)) {
                 continue;
             }
             
             // Fill the pixel
-            data[currentIndex] = fillColor.r;
-            data[currentIndex + 1] = fillColor.g;
-            data[currentIndex + 2] = fillColor.b;
+            data[currentIndex] = rgbFillColor.r;
+            data[currentIndex + 1] = rgbFillColor.g;
+            data[currentIndex + 2] = rgbFillColor.b;
             data[currentIndex + 3] = 255; // Full alpha
             
-            // Add adjacent pixels to stack
-            stack.push({x: x + 1, y: y});
-            stack.push({x: x - 1, y: y});
-            stack.push({x: x, y: y + 1});
-            stack.push({x: x, y: y - 1});
+            // Add adjacent pixels to stack (if stack isn't too large)
+            if (stack.length < maxStackSize) {
+                if (x + 1 < width) stack.push({x: x + 1, y: y});
+                if (x - 1 >= 0) stack.push({x: x - 1, y: y});
+                if (y + 1 < height) stack.push({x: x, y: y + 1});
+                if (y - 1 >= 0) stack.push({x: x, y: y - 1});
+            }
         }
         
         ctx.putImageData(imageData, 0, 0);
@@ -148,7 +171,6 @@ const App = () => {
         ]);
     };
 
-    // Helper function to get color at a specific point
     const getColorAt = (imageData, x, y) => {
         const index = (y * imageData.width + x) * 4;
         return [
@@ -159,20 +181,14 @@ const App = () => {
         ];
     };
 
-    // Helper function to compare colors with some tolerance
-    const colorsMatch = (color1, color2, tolerance = 10) => {
-        return Math.abs(color1[0] - color2[0]) <= tolerance &&
-               Math.abs(color1[1] - color2[1]) <= tolerance &&
-               Math.abs(color1[2] - color2[2]) <= tolerance &&
-               Math.abs(color1[3] - color2[3]) <= tolerance;
-    };
-
-    // Helper to convert hex to RGB
     const hexToRgb = (hex) => {
         // Handle when hex is already an RGB object
         if (typeof hex === 'object' && hex.r !== undefined) {
             return hex;
         }
+        
+        // Ensure hex is a string
+        hex = String(hex);
         
         // Remove # if present
         hex = hex.replace ? hex.replace('#', '') : '';
@@ -188,6 +204,13 @@ const App = () => {
         const b = parseInt(hex.substring(4, 6), 16);
         
         return {r, g, b};
+    };
+
+    const colorsMatch = (color1, color2, tolerance = 10) => {
+        return Math.abs(color1[0] - color2[0]) <= tolerance &&
+               Math.abs(color1[1] - color2[1]) <= tolerance &&
+               Math.abs(color1[2] - color2[2]) <= tolerance &&
+               Math.abs(color1[3] - color2[3]) <= tolerance;
     };
 
     const colorOptions = [
