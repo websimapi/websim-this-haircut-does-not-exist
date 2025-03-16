@@ -14,6 +14,7 @@ const App = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [selectedHaircut, setSelectedHaircut] = useState(null);
     
     const canvasRef = useRef(null);
@@ -48,19 +49,14 @@ const App = () => {
     }, [selectedColor, brushSize]);
 
     const startDrawing = ({ nativeEvent }) => {
+        const { offsetX, offsetY } = nativeEvent;
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
-        let x, y;
-        if (nativeEvent.touches) {
-            x = (nativeEvent.touches[0].clientX - rect.left) * scaleX;
-            y = (nativeEvent.touches[0].clientY - rect.top) * scaleY;
-        } else {
-            x = (nativeEvent.offsetX) * scaleX;
-            y = (nativeEvent.offsetY) * scaleY;
-        }
+        const x = (offsetX) * scaleX;
+        const y = (offsetY) * scaleY;
         
         contextRef.current.beginPath();
         contextRef.current.moveTo(x, y);
@@ -69,20 +65,14 @@ const App = () => {
 
     const draw = ({ nativeEvent }) => {
         if (!isDrawing) return;
-        
+        const { offsetX, offsetY } = nativeEvent;
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
-        let x, y;
-        if (nativeEvent.touches) {
-            x = (nativeEvent.touches[0].clientX - rect.left) * scaleX;
-            y = (nativeEvent.touches[0].clientY - rect.top) * scaleY;
-        } else {
-            x = (nativeEvent.offsetX) * scaleX;
-            y = (nativeEvent.offsetY) * scaleY;
-        }
+        const x = (offsetX) * scaleX;
+        const y = (offsetY) * scaleY;
         
         contextRef.current.lineTo(x, y);
         contextRef.current.stroke();
@@ -102,7 +92,8 @@ const App = () => {
         setGeneratedImageUrl('');
     };
 
-    const analyzeDrawing = async () => {
+    const analyzeAndGenerateHaircut = async () => {
+        setIsProcessing(true);
         setIsAnalyzing(true);
         try {
             const canvas = canvasRef.current;
@@ -131,27 +122,17 @@ const App = () => {
             });
             
             setDescription(completion.content);
-        } catch (error) {
-            console.error('Error analyzing drawing:', error);
-            setDescription('Error analyzing the drawing. Please try again.');
-        } finally {
             setIsAnalyzing(false);
-        }
-    };
-
-    const generateHaircutImage = async () => {
-        if (!description) return;
-        
-        setIsGenerating(true);
-        try {
+            setIsGenerating(true);
+            
+            // Now generate the image
             const result = await websim.imageGen({
-                prompt: `Professional photograph of a person with the following haircut: ${description}. Professional salon photo, high quality, detailed hair texture, salon lighting.`,
+                prompt: `Professional photograph of a person with the following haircut: ${completion.content}. Professional salon photo, high quality, detailed hair texture, salon lighting.`,
                 aspect_ratio: "1:1"
             });
             
             setGeneratedImageUrl(result.url);
             
-            const canvas = canvasRef.current;
             const drawingDataUrl = canvas.toDataURL('image/jpeg');
             
             const drawingUrl = await websim.upload(
@@ -159,16 +140,18 @@ const App = () => {
             );
             
             await room.collection('haircut').create({
-                description,
+                description: completion.content,
                 drawingUrl,
                 haircutUrl: result.url
             });
             
         } catch (error) {
-            console.error('Error generating haircut image:', error);
-            alert('Error generating the haircut image. Please try again.');
+            console.error('Error processing haircut:', error);
+            alert('Error analyzing or generating the haircut. Please try again.');
         } finally {
+            setIsAnalyzing(false);
             setIsGenerating(false);
+            setIsProcessing(false);
         }
     };
     
@@ -260,9 +243,6 @@ const App = () => {
                                     onMouseMove={draw}
                                     onMouseUp={stopDrawing}
                                     onMouseLeave={stopDrawing}
-                                    onTouchStart={startDrawing}
-                                    onTouchMove={draw}
-                                    onTouchEnd={stopDrawing}
                                     style={{ 
                                         width: '100%', 
                                         height: '400px',
@@ -277,20 +257,17 @@ const App = () => {
                                 <i className="fas fa-trash-alt"></i> Clear
                             </button>
                             <button 
-                                onClick={analyzeDrawing}
-                                disabled={isAnalyzing}
-                                className="analyze-btn"
-                            >
-                                {isAnalyzing ? <span className="spinner-small"></span> : <i className="fas fa-magic"></i>} 
-                                {isAnalyzing ? 'Analyzing...' : 'Analyze Drawing'}
-                            </button>
-                            <button 
-                                onClick={generateHaircutImage}
-                                disabled={!description || isGenerating}
+                                onClick={analyzeAndGenerateHaircut}
+                                disabled={isProcessing}
                                 className="generate-btn"
                             >
-                                {isGenerating ? <span className="spinner-small"></span> : <i className="fas fa-image"></i>} 
-                                {isGenerating ? 'Generating...' : 'Generate Haircut'}
+                                {isAnalyzing ? (
+                                    <><span className="spinner-small"></span> Analyzing...</>
+                                ) : isGenerating ? (
+                                    <><span className="spinner-small"></span> Generating...</>
+                                ) : (
+                                    <><i className="fas fa-magic"></i> Analyze & Generate Haircut</>
+                                )}
                             </button>
                         </div>
                     </div>
