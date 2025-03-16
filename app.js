@@ -186,7 +186,9 @@ const App = () => {
                         
                         I've now drawn some modifications to this haircut, which you can see in the attached image. Please analyze both the original description and my new drawing, then create a detailed description of what this remixed haircut should look like.
                         
-                        Important: The remixed haircut should clearly incorporate elements from both the original haircut and my new drawing. Be very specific about what elements are changing from the original and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features.`
+                        IMPORTANT: Focus primarily on the new drawing in the image - this should be the main influence for your description. While you should maintain some styling elements from the original haircut for consistency, the new drawing should drive most of the changes and be the dominant influence on the final description. The remix should clearly represent an evolution from the original design, with the new elements being the most prominent features.
+                        
+                        Be very specific about what elements are changing from the original and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features.`
                     },
                     {
                         type: "image_url",
@@ -220,7 +222,15 @@ const App = () => {
             
             // Now generate the image
             console.log('Generating haircut image from description');
-            const imagePrompt = `Professional photograph of a person with the following haircut: ${completion.content}. Professional salon photo, high quality, detailed hair texture, salon lighting.`;
+            let imagePrompt = `Professional photograph of a person with the following haircut: ${completion.content}. Professional salon photo, high quality, detailed hair texture, salon lighting.`;
+            
+            // Add remix context to image generation prompt if applicable
+            if (isRemixing && remixSourceHaircut) {
+                imagePrompt = `Professional photograph of a person with the following haircut: ${completion.content}. 
+                Professional salon photo, high quality, detailed hair texture, salon lighting.
+                Note: This is a remix of a previous haircut design. Maintain the same photography style and composition as the original image for consistency, but clearly implement all the new style elements described above.`;
+            }
+            
             setGeneratorPrompt(imagePrompt);
             
             const result = await websim.imageGen({
