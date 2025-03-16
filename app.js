@@ -364,11 +364,11 @@ const App = () => {
                 setDescription('');
                 setGeneratedImageUrl('');
                 
-                // Force redraw after state updates
+                // Force redraw after state updates - add a 1 second delay for first load
                 setTimeout(() => {
                     redrawVectors();
                     console.log('Canvas redrawn with vectors for remixing');
-                }, 100);
+                }, 1000);
                 
                 console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
             }, 50);
