@@ -169,8 +169,13 @@ const App = () => {
 
     // Helper to convert hex to RGB
     const hexToRgb = (hex) => {
+        // Handle when hex is already an RGB object
+        if (typeof hex === 'object' && hex.r !== undefined) {
+            return hex;
+        }
+        
         // Remove # if present
-        hex = hex.replace('#', '');
+        hex = hex.replace ? hex.replace('#', '') : '';
         
         // Convert 3-digit hex to 6-digit
         if (hex.length === 3) {
