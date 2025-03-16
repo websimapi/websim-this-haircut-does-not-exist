@@ -16,6 +16,7 @@ const App = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedHaircut, setSelectedHaircut] = useState(null);
+    const [drawingData, setDrawingData] = useState([]);
     
     const canvasRef = useRef(null);
     const contextRef = useRef(null);
@@ -61,6 +62,14 @@ const App = () => {
         contextRef.current.beginPath();
         contextRef.current.moveTo(x, y);
         setIsDrawing(true);
+        
+        // Start a new stroke in the drawing data
+        setDrawingData(prev => [...prev, {
+            type: 'stroke',
+            color: selectedColor,
+            width: brushSize,
+            points: [{x, y}]
+        }]);
     };
 
     const draw = ({ nativeEvent }) => {
@@ -76,6 +85,16 @@ const App = () => {
         
         contextRef.current.lineTo(x, y);
         contextRef.current.stroke();
+        
+        // Add point to the current stroke
+        setDrawingData(prev => {
+            const newData = [...prev];
+            const currentStrokeIndex = newData.length - 1;
+            if (currentStrokeIndex >= 0) {
+                newData[currentStrokeIndex].points.push({x, y});
+            }
+            return newData;
+        });
     };
 
     const stopDrawing = () => {
@@ -90,6 +109,7 @@ const App = () => {
         context.fillRect(0, 0, canvas.width, canvas.height);
         setDescription('');
         setGeneratedImageUrl('');
+        setDrawingData([]);
     };
 
     const analyzeAndGenerateHaircut = async () => {
@@ -133,15 +153,10 @@ const App = () => {
             
             setGeneratedImageUrl(result.url);
             
-            const drawingDataUrl = canvas.toDataURL('image/jpeg');
-            
-            const drawingUrl = await websim.upload(
-                dataURLtoFile(drawingDataUrl, 'drawing.jpg')
-            );
-            
+            // Store the vector drawing data instead of image
             await room.collection('haircut').create({
                 description: completion.content,
-                drawingUrl,
+                drawingData: drawingData,
                 haircutUrl: result.url
             });
             
@@ -180,6 +195,33 @@ const App = () => {
         setSelectedHaircut(null);
     };
 
+    // Function to render drawing data onto a canvas
+    const renderDrawingData = (context, data) => {
+        // Clear canvas first
+        context.fillStyle = 'white';
+        context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+        
+        // Render each stroke
+        data.forEach(stroke => {
+            if (stroke.type === 'stroke' && stroke.points.length > 0) {
+                context.beginPath();
+                context.strokeStyle = stroke.color;
+                context.lineWidth = stroke.width;
+                context.lineCap = 'round';
+                
+                // Move to first point
+                context.moveTo(stroke.points[0].x, stroke.points[0].y);
+                
+                // Draw lines to all other points
+                for (let i = 1; i < stroke.points.length; i++) {
+                    context.lineTo(stroke.points[i].x, stroke.points[i].y);
+                }
+                
+                context.stroke();
+            }
+        });
+    };
+
     const remixHaircut = async (haircut, e) => {
         e.stopPropagation(); // Prevent opening the modal
         
@@ -200,15 +242,20 @@ const App = () => {
             setDescription('');
             setGeneratedImageUrl('');
             
-            // Create a temporary image to load the drawing
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                // Draw the loaded image, fitting it to the canvas
-                context.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
-            img.src = haircut.drawingUrl;
-        }, 100); // Small delay to ensure canvas is available
+            // Load the vector drawing data
+            if (haircut.drawingData) {
+                renderDrawingData(context, haircut.drawingData);
+                setDrawingData(haircut.drawingData);
+            } else if (haircut.drawingUrl) {
+                // Fallback for old data that only has image URL
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = haircut.drawingUrl;
+            }
+        }, 100);
     };
 
     return (
