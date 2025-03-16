@@ -172,28 +172,24 @@ const App = () => {
                 }
             ];
             
-            // If we're remixing, include the previous haircut image for context
+            // If we're remixing, instead of sending the image directly, we'll send a textual description
             if (isRemixing && remixSourceHaircut) {
                 systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs based on iterations of previous styles. You excel at identifying how a drawing should influence changes to an existing haircut.";
-                
-                console.log('Setting up remix prompts with image URLs:');
-                console.log('Drawing URL (canvas):', imageDataUrl.substring(0, 50) + '...');
-                console.log('Previous haircut URL:', remixSourceHaircut.haircutUrl);
                 
                 userPrompt = [
                     {
                         type: "text",
-                        text: "I'm showing you two images: 1) A new drawing of a haircut and 2) A previously generated haircut based on an earlier drawing. I want to remix the previous haircut using the new drawing as inspiration. Please create a detailed description of what this new remixed haircut should look like, incorporating elements from both the new drawing and the existing haircut. Be specific about what elements are changing and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features."
+                        text: `I'm remixing a haircut. Here is the DESCRIPTION of the original haircut: "${remixSourceHaircut.description}". 
+                        
+                        I've now drawn some changes to this haircut, which you can see in the attached image. Please create a detailed description of what this new remixed haircut should look like, incorporating elements from both the new drawing and the existing haircut description. Be specific about what elements are changing and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features.`
                     },
                     {
                         type: "image_url",
                         image_url: { url: imageDataUrl }
-                    },
-                    {
-                        type: "image_url",
-                        image_url: { url: remixSourceHaircut.haircutUrl }
                     }
                 ];
+                
+                console.log('Sending text-based remix prompt to avoid CORS issues');
             }
             
             console.log('Sending analysis request with prompt:', userPrompt);
