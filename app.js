@@ -32,7 +32,7 @@ const App = () => {
     
     const haircuts = useSyncExternalStore(
         room.collection('haircut').subscribe,
-        () => room.collection('haircut').getList().reverse()
+        () => room.collection('haircut').getList().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     );
 
     useEffect(() => {
