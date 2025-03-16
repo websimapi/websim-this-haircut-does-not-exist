@@ -333,6 +333,14 @@ const App = () => {
         '#ffff00', '#00ffff', '#ff00ff', '#a52a2a', '#808080'
     ];
 
+    const openHaircutModal = (haircut) => {
+        setSelectedHaircut(haircut);
+    };
+
+    const closeModal = () => {
+        setSelectedHaircut(null);
+    };
+
     const remixHaircut = (haircut) => {
         try {
             console.log('Starting remix of haircut:', haircut.id);
@@ -368,14 +376,6 @@ const App = () => {
             console.error('Error remixing haircut:', error);
             alert('Sorry, this haircut cannot be remixed. Error: ' + error.message);
         }
-    };
-
-    const openHaircutModal = (haircut) => {
-        setSelectedHaircut(haircut);
-    };
-
-    const closeModal = () => {
-        setSelectedHaircut(null);
     };
 
     return (
