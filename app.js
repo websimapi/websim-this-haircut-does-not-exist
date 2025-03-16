@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM, { createRoot } from 'react-dom';
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+const { useState, useEffect, useRef } = React;
+const { createRoot } = ReactDOM;
+
 import ColorPicker from './ColorPicker';
 import Canvas from './Canvas';
 import Gallery from './Gallery';
