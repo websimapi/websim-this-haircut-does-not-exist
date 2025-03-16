@@ -49,7 +49,7 @@ const App = () => {
         if (isRemixing && drawingVectors.length > 0) {
             redrawVectors();
         }
-    }, [isRemixing]);
+    }, [isRemixing, drawingVectors]);
 
     useEffect(() => {
         if (contextRef.current) {
@@ -174,19 +174,19 @@ const App = () => {
                 }
             ];
             
-            // If we're remixing, instead of sending the image directly, we'll send a textual description
+            // If we're remixing, use a more detailed prompt that references the original haircut
             if (isRemixing && remixSourceHaircut) {
-                systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs based on iterations of previous styles. You excel at identifying how a drawing should influence changes to an existing haircut.";
+                systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs based on iterations of previous styles. Given an original haircut description and a new drawing that modifies it, create a detailed description of what the remixed haircut should look like.";
                 
-                // Include parent description regardless of whether it's a remix of a remix
-                const originalDescription = remixSourceHaircut.description;
-                
+                // More detailed prompt that focuses on the relationship between original and new design
                 userPrompt = [
                     {
                         type: "text",
-                        text: `I'm remixing a haircut. Here is the DESCRIPTION of the original haircut: "${originalDescription}". 
+                        text: `I'm remixing a haircut. Here is the ORIGINAL HAIRCUT DESCRIPTION: "${remixSourceHaircut.description}". 
                         
-                        I've now drawn some changes to this haircut, which you can see in the attached image. Please create a detailed description of what this new remixed haircut should look like, incorporating elements from both the new drawing and the existing haircut description. Be specific about what elements are changing and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features.`
+                        I've now drawn some modifications to this haircut, which you can see in the attached image. Please analyze both the original description and my new drawing, then create a detailed description of what this remixed haircut should look like.
+                        
+                        Important: The remixed haircut should clearly incorporate elements from both the original haircut and my new drawing. Be very specific about what elements are changing from the original and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features.`
                     },
                     {
                         type: "image_url",
@@ -194,7 +194,7 @@ const App = () => {
                     }
                 ];
                 
-                console.log('Sending text-based remix prompt to avoid CORS issues');
+                console.log('Using enhanced remix prompt with original haircut description');
             }
             
             console.log('Sending analysis request with prompt:', userPrompt);
@@ -255,8 +255,8 @@ const App = () => {
                 console.log('Adding remix information to record');
                 haircutData.isRemix = true;
                 haircutData.parentId = remixSourceHaircut.id;
-                haircutData.originalDrawingUrl = remixSourceHaircut.isRemix ? remixSourceHaircut.originalDrawingUrl : remixSourceHaircut.drawingUrl;
-                haircutData.originalHaircutUrl = remixSourceHaircut.isRemix ? remixSourceHaircut.originalHaircutUrl : remixSourceHaircut.haircutUrl;
+                haircutData.originalDrawingUrl = remixSourceHaircut.drawingUrl;
+                haircutData.originalHaircutUrl = remixSourceHaircut.haircutUrl;
             }
             
             console.log('Creating haircut record with data:', haircutData);
@@ -315,20 +315,23 @@ const App = () => {
             const vectors = JSON.parse(haircut.vectors || '[]');
             console.log('Parsed vectors data:', vectors);
             
-            setDrawingVectors(vectors);
-            setIsRemixing(true);
-            setRemixSourceHaircut({
-                ...haircut,
-                // Ensure we keep the most relevant parent haircut for remixes of remixes
-                originalDrawingUrl: haircut.isRemix ? haircut.originalDrawingUrl : haircut.drawingUrl,
-                originalHaircutUrl: haircut.isRemix ? haircut.originalHaircutUrl : haircut.haircutUrl
-            });
-            setActiveTab('draw');
-            setSelectedHaircut(null);
-            setDescription('');
-            setGeneratedImageUrl('');
-            
-            console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
+            // Wait for state updates to complete before continuing
+            setTimeout(() => {
+                setDrawingVectors(vectors);
+                setIsRemixing(true);
+                setRemixSourceHaircut(haircut);
+                setActiveTab('draw');
+                setSelectedHaircut(null);
+                setDescription('');
+                setGeneratedImageUrl('');
+                
+                // Force redraw after state updates
+                setTimeout(() => {
+                    redrawVectors();
+                }, 100);
+                
+                console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
+            }, 50);
         } catch (error) {
             console.error('Error remixing haircut:', error);
             alert('Sorry, this haircut cannot be remixed. Error: ' + error.message);
