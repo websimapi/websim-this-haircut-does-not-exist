@@ -174,21 +174,18 @@ const App = () => {
                 }
             ];
             
-            // If we're remixing, use a more detailed prompt that references the original haircut
+            // If we're remixing, use a simplified prompt that focuses primarily on the new drawing
             if (isRemixing && remixSourceHaircut) {
-                systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs based on iterations of previous styles. Given an original haircut description and a new drawing that modifies it, create a detailed description of what the remixed haircut should look like.";
+                systemPrompt = "You are a professional hair stylist with expertise in creating new haircut designs. Focus primarily on the drawn image to create a detailed haircut description.";
                 
-                // More detailed prompt that focuses on the relationship between original and new design
                 userPrompt = [
                     {
                         type: "text",
-                        text: `I'm remixing a haircut. Here is the ORIGINAL HAIRCUT DESCRIPTION: "${remixSourceHaircut.description}". 
+                        text: `I'm creating a new haircut based on this drawing. Please analyze the image and describe what this would look like as an actual haircut.
                         
-                        I've now drawn some modifications to this haircut, which you can see in the attached image. Please analyze both the original description and my new drawing, then create a detailed description of what this remixed haircut should look like.
+                        Note: This is a remix of a previous haircut which had this description: "${remixSourceHaircut.description}".
                         
-                        IMPORTANT: Focus primarily on the new drawing in the image - this should be the main influence for your description. While you should maintain some styling elements from the original haircut for consistency, the new drawing should drive most of the changes and be the dominant influence on the final description. The remix should clearly represent an evolution from the original design, with the new elements being the most prominent features.
-                        
-                        Be very specific about what elements are changing from the original and what stays the same. Focus on length, texture, color, styling techniques, and distinctive features.`
+                        IMPORTANT: Focus primarily on the new drawing in the image - this should be the main influence for your description. The drawing should drive most of your description, though you can maintain some styling elements from the original description for context.`
                     },
                     {
                         type: "image_url",
@@ -196,7 +193,7 @@ const App = () => {
                     }
                 ];
                 
-                console.log('Using enhanced remix prompt with original haircut description');
+                console.log('Using simplified remix prompt focusing on the new drawing');
             }
             
             console.log('Sending analysis request with prompt:', userPrompt);
@@ -224,11 +221,10 @@ const App = () => {
             console.log('Generating haircut image from description');
             let imagePrompt = `Professional photograph of a person with the following haircut: ${completion.content}. Professional salon photo, high quality, detailed hair texture, salon lighting.`;
             
-            // Add remix context to image generation prompt if applicable
+            // Add minimal remix context to image generation prompt if applicable
             if (isRemixing && remixSourceHaircut) {
                 imagePrompt = `Professional photograph of a person with the following haircut: ${completion.content}. 
-                Professional salon photo, high quality, detailed hair texture, salon lighting.
-                Note: This is a remix of a previous haircut design. Maintain the same photography style and composition as the original image for consistency, but clearly implement all the new style elements described above.`;
+                Professional salon photo, high quality, detailed hair texture, salon lighting.`;
             }
             
             setGeneratorPrompt(imagePrompt);
@@ -338,6 +334,7 @@ const App = () => {
                 // Force redraw after state updates
                 setTimeout(() => {
                     redrawVectors();
+                    console.log('Canvas redrawn with vectors for remixing');
                 }, 100);
                 
                 console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
