@@ -48,17 +48,25 @@ const App = () => {
         }
     }, [selectedColor, brushSize]);
 
+    const getMousePos = (canvas, evt) => {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top
+        };
+    };
+
     const startDrawing = ({ nativeEvent }) => {
-        const { offsetX, offsetY } = nativeEvent;
+        const { x, y } = getMousePos(canvasRef.current, nativeEvent);
         contextRef.current.beginPath();
-        contextRef.current.moveTo(offsetX, offsetY);
+        contextRef.current.moveTo(x, y);
         setIsDrawing(true);
     };
 
     const draw = ({ nativeEvent }) => {
         if (!isDrawing) return;
-        const { offsetX, offsetY } = nativeEvent;
-        contextRef.current.lineTo(offsetX, offsetY);
+        const { x, y } = getMousePos(canvasRef.current, nativeEvent);
+        contextRef.current.lineTo(x, y);
         contextRef.current.stroke();
     };
 
@@ -332,4 +340,3 @@ const App = () => {
 
 const root = createRoot(document.getElementById('app'));
 root.render(<App />);
-
