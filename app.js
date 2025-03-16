@@ -154,46 +154,50 @@ const App = () => {
             const canvas = canvasRef.current;
             const imageDataUrl = canvas.toDataURL('image/jpeg');
             
-            let promptContent = [
+            let messages = [
                 {
-                    type: "text",
-                    text: "Describe this drawing as if it were a haircut or hairstyle. Be detailed and creative. If it's abstract, interpret what haircut it might represent."
-                },
-                {
-                    type: "image_url",
-                    image_url: { url: imageDataUrl }
+                    role: "system",
+                    content: "You are a professional hair stylist with expertise in describing haircuts and styles. Given an image of a drawn haircut or abstract shape, describe what this would look like as an actual haircut in great detail. Focus on length, texture, color, styling techniques, and any distinctive features. Be creative and detailed."
                 }
             ];
             
-            // If we're remixing, include the previous haircut image for context
+            // Different prompts for regular vs remix
             if (isRemixing && remixSourceHaircut) {
-                promptContent = [
-                    {
-                        type: "text",
-                        text: "I'm showing you two images: 1) A drawing of a haircut and 2) A previously generated haircut based on an earlier version of this drawing. The first image is a new iteration or modification of the drawing that led to the second image. Please analyze both images and create a detailed description of what this new haircut should look like, incorporating elements from both the drawing and the previous haircut. Be creative and detailed, focusing on length, texture, color, styling techniques, and distinctive features."
-                    },
-                    {
-                        type: "image_url",
-                        image_url: { url: imageDataUrl }
-                    },
-                    {
-                        type: "image_url",
-                        image_url: { url: remixSourceHaircut.haircutUrl }
-                    }
-                ];
+                messages.push({
+                    role: "user",
+                    content: [
+                        {
+                            type: "text",
+                            text: "I'm showing you two images: 1) A drawing of a haircut and 2) A previously generated haircut based on an earlier version of this drawing. The first image is a new iteration or modification of the drawing. Please analyze both images and create a detailed description of what this new haircut should look like, incorporating elements from both the drawing and the previous haircut. Be creative and detailed, focusing on length, texture, color, styling techniques, and distinctive features."
+                        },
+                        {
+                            type: "image_url",
+                            image_url: { url: imageDataUrl }
+                        },
+                        {
+                            type: "image_url",
+                            image_url: { url: remixSourceHaircut.haircutUrl }
+                        }
+                    ]
+                });
+            } else {
+                messages.push({
+                    role: "user",
+                    content: [
+                        {
+                            type: "text",
+                            text: "Describe this drawing as if it were a haircut or hairstyle. Be detailed and creative. If it's abstract, interpret what haircut it might represent."
+                        },
+                        {
+                            type: "image_url",
+                            image_url: { url: imageDataUrl }
+                        }
+                    ]
+                });
             }
             
             const completion = await websim.chat.completions.create({
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a professional hair stylist with expertise in describing haircuts and styles. Given an image of a drawn haircut or abstract shape, describe what this would look like as an actual haircut in great detail. Focus on length, texture, color, styling techniques, and any distinctive features. Be creative and detailed."
-                    },
-                    {
-                        role: "user",
-                        content: promptContent
-                    }
-                ]
+                messages: messages
             });
             
             setDescription(completion.content);
