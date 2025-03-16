@@ -186,33 +186,29 @@ const App = () => {
         // Switch to the draw tab
         setActiveTab('draw');
         
-        // First, ensure canvas is properly initialized
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        
-        // Clear the current drawing and description
-        context.fillStyle = 'white';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        setDescription('');
-        setGeneratedImageUrl('');
-        
-        // Create a temporary image to load the drawing
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        
-        // Only attempt to draw the image after it's fully loaded
-        img.onload = () => {
-            context.drawImage(img, 0, 0, canvas.width, canvas.height);
-        };
-        
-        // Handle image loading errors
-        img.onerror = (err) => {
-            console.error('Error loading image for remix:', err);
-            alert('Error loading the drawing. Please try another one.');
-        };
-        
-        // Set the source after defining the event handlers
-        img.src = haircut.drawingUrl;
+        // Wait for React to update the DOM
+        setTimeout(() => {
+            // Now canvas should be accessible
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            
+            const context = canvas.getContext('2d');
+            
+            // Clear the current drawing and description
+            context.fillStyle = 'white';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            setDescription('');
+            setGeneratedImageUrl('');
+            
+            // Create a temporary image to load the drawing
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                // Draw the loaded image, fitting it to the canvas
+                context.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = haircut.drawingUrl;
+        }, 100); // Small delay to ensure canvas is available
     };
 
     return (
