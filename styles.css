@@ -193,6 +193,42 @@ body {
     margin-top: 5px;
 }
 
+.tool-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.tool-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #f0f0f0;
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tool-btn:hover {
+    background-color: #f7f7f7;
+    transform: translateY(-2px);
+}
+
+.tool-btn.active {
+    border-color: #6e8efb;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(110, 142, 251, 0.3);
+}
+
+.tool-btn i {
+    font-size: 18px;
+}
+
 .action-buttons {
     display: flex;
     gap: 15px;

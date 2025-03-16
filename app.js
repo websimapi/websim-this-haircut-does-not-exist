@@ -23,7 +23,8 @@ const App = () => {
     const [drawingVectors, setDrawingVectors] = useState([]);
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState('#000000');
-    
+    const [currentTool, setCurrentTool] = useState('brush');
+
     const canvasRef = useRef(null);
     const contextRef = useRef(null);
     const canvasSizeRef = useRef({ width: 500, height: 500 });
@@ -77,6 +78,118 @@ const App = () => {
         };
     }, []);
 
+    const handleCustomColorChange = (e) => {
+        setCustomColor(e.target.value);
+    };
+
+    const applyCustomColor = () => {
+        setSelectedColor(customColor);
+        setShowColorPicker(false);
+    };
+
+    const toggleColorPicker = (e) => {
+        e.stopPropagation();
+        setShowColorPicker(!showColorPicker);
+    };
+
+    const floodFill = (startX, startY, fillColor) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Get the color we're filling
+        const targetColor = getColorAt(imageData, startX, startY);
+        
+        // Don't fill if target color is the same as fill color
+        if (colorsMatch(targetColor, hexToRgb(fillColor))) {
+            return;
+        }
+        
+        // Stack for flood fill algorithm (x, y coordinates)
+        const stack = [{x: startX, y: startY}];
+        
+        while (stack.length > 0) {
+            const {x, y} = stack.pop();
+            const currentIndex = (y * width + x) * 4;
+            
+            // Skip if out of bounds or if the color doesn't match target
+            if (x < 0 || y < 0 || x >= width || y >= height || 
+                !colorsMatch([data[currentIndex], data[currentIndex + 1], data[currentIndex + 2], data[currentIndex + 3]], targetColor)) {
+                continue;
+            }
+            
+            // Fill the pixel
+            data[currentIndex] = fillColor.r;
+            data[currentIndex + 1] = fillColor.g;
+            data[currentIndex + 2] = fillColor.b;
+            data[currentIndex + 3] = 255; // Full alpha
+            
+            // Add adjacent pixels to stack
+            stack.push({x: x + 1, y: y});
+            stack.push({x: x - 1, y: y});
+            stack.push({x: x, y: y + 1});
+            stack.push({x: x, y: y - 1});
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        
+        // Add the fill operation to drawing vectors for later replay
+        setDrawingVectors(prev => [
+            ...prev, 
+            {
+                type: 'fill',
+                point: {x: startX, y: startY},
+                color: fillColor,
+                targetColor: targetColor
+            }
+        ]);
+    };
+
+    // Helper function to get color at a specific point
+    const getColorAt = (imageData, x, y) => {
+        const index = (y * imageData.width + x) * 4;
+        return [
+            imageData.data[index],
+            imageData.data[index + 1],
+            imageData.data[index + 2],
+            imageData.data[index + 3]
+        ];
+    };
+
+    // Helper function to compare colors with some tolerance
+    const colorsMatch = (color1, color2, tolerance = 10) => {
+        return Math.abs(color1[0] - color2[0]) <= tolerance &&
+               Math.abs(color1[1] - color2[1]) <= tolerance &&
+               Math.abs(color1[2] - color2[2]) <= tolerance &&
+               Math.abs(color1[3] - color2[3]) <= tolerance;
+    };
+
+    // Helper to convert hex to RGB
+    const hexToRgb = (hex) => {
+        // Remove # if present
+        hex = hex.replace('#', '');
+        
+        // Convert 3-digit hex to 6-digit
+        if (hex.length === 3) {
+            hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        
+        // Parse the hex values
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        return {r, g, b};
+    };
+
+    const colorOptions = [
+        '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff', 
+        '#ffff00', '#00ffff', '#ff00ff', '#a52a2a', '#808080'
+    ];
+
     const startDrawing = ({ nativeEvent }) => {
         const { offsetX, offsetY } = nativeEvent;
         const canvas = canvasRef.current;
@@ -87,6 +200,12 @@ const App = () => {
         const x = (offsetX) * scaleX;
         const y = (offsetY) * scaleY;
         
+        // If using fill bucket, perform flood fill and return
+        if (currentTool === 'fill') {
+            floodFill(Math.floor(x), Math.floor(y), hexToRgb(selectedColor));
+            return;
+        }
+        
         contextRef.current.beginPath();
         contextRef.current.moveTo(x, y);
         setIsDrawing(true);
@@ -95,6 +214,7 @@ const App = () => {
         setDrawingVectors(prev => [
             ...prev, 
             {
+                type: 'brush',
                 points: [{x, y}],
                 color: selectedColor,
                 size: brushSize
@@ -152,6 +272,13 @@ const App = () => {
         
         // Redraw all vectors
         drawingVectors.forEach(vector => {
+            if (vector.type === 'fill') {
+                // For fill operations, we need to redo the flood fill
+                floodFill(Math.floor(vector.point.x), Math.floor(vector.point.y), vector.color);
+                return;
+            }
+            
+            // For brush strokes
             if (vector.points.length < 2) return;
             
             context.beginPath();
@@ -166,20 +293,6 @@ const App = () => {
             
             context.stroke();
         });
-    };
-
-    const handleCustomColorChange = (e) => {
-        setCustomColor(e.target.value);
-    };
-
-    const applyCustomColor = () => {
-        setSelectedColor(customColor);
-        setShowColorPicker(false);
-    };
-
-    const toggleColorPicker = (e) => {
-        e.stopPropagation();
-        setShowColorPicker(!showColorPicker);
     };
 
     const analyzeAndGenerateHaircut = async () => {
@@ -328,11 +441,6 @@ const App = () => {
         return new File([u8arr], filename, { type: mime });
     };
 
-    const colorOptions = [
-        '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff', 
-        '#ffff00', '#00ffff', '#ff00ff', '#a52a2a', '#808080'
-    ];
-
     const openHaircutModal = (haircut) => {
         setSelectedHaircut(haircut);
     };
@@ -364,11 +472,11 @@ const App = () => {
                 setDescription('');
                 setGeneratedImageUrl('');
                 
-                // Force redraw after state updates - add a 1 second delay for first load
+                // Force redraw after state updates
                 setTimeout(() => {
                     redrawVectors();
                     console.log('Canvas redrawn with vectors for remixing');
-                }, 1000);
+                }, 100);
                 
                 console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
             }, 50);
@@ -430,6 +538,22 @@ const App = () => {
                         
                         <div className="canvas-controls">
                             <div className="tools-panel">
+                                <div className="tool-buttons">
+                                    <button 
+                                        className={`tool-btn ${currentTool === 'brush' ? 'active' : ''}`}
+                                        onClick={() => setCurrentTool('brush')}
+                                        title="Brush Tool"
+                                    >
+                                        <i className="fas fa-paint-brush"></i>
+                                    </button>
+                                    <button 
+                                        className={`tool-btn ${currentTool === 'fill' ? 'active' : ''}`}
+                                        onClick={() => setCurrentTool('fill')}
+                                        title="Fill Tool"
+                                    >
+                                        <i className="fas fa-fill-drip"></i>
+                                    </button>
+                                </div>
                                 <div className="brush-controls">
                                     <label htmlFor="size">Brush Size: {brushSize}px</label>
                                     <input
@@ -440,6 +564,7 @@ const App = () => {
                                         max="50"
                                         value={brushSize}
                                         onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                                        disabled={currentTool === 'fill'}
                                     />
                                 </div>
                                 <div className="color-picker">
@@ -482,7 +607,9 @@ const App = () => {
                                     style={{ 
                                         width: '100%', 
                                         height: '400px',
-                                        cursor: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='${brushSize}' width='${brushSize}'%3E%3Ccircle cx='${brushSize/2}' cy='${brushSize/2}' r='${brushSize/2}' fill='${encodeURIComponent(selectedColor)}'/%3E%3C/svg%3E") ${brushSize/2} ${brushSize/2}, crosshair`
+                                        cursor: currentTool === 'brush' 
+                                            ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='${brushSize}' width='${brushSize}'%3E%3Ccircle cx='${brushSize/2}' cy='${brushSize/2}' r='${brushSize/2}' fill='${encodeURIComponent(selectedColor)}'/%3E%3C/svg%3E") ${brushSize/2} ${brushSize/2}, crosshair`
+                                            : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='20' width='20' viewBox='0 0 512 512'%3E%3Cpath fill='${encodeURIComponent(selectedColor)}' d='M502.63 217.06L294.94 9.37C288.69 3.12 280.5 0 272.31 0s-16.38 3.12-22.62 9.37l-81.58 81.58L81.93 4.77c-6.24-6.25-16.38-6.25-22.62 0L36.69 27.38c-6.24 6.25-6.24 16.38 0 22.63l86.19 86.18-94.76 94.76c-37.5 37.5-37.5 98.26 0 135.76l117.19 117.19c18.75 18.74 43.31 28.12 67.87 28.12 24.57 0 49.13-9.37 67.88-28.12l221.57-221.57c12.49-12.5 12.49-32.76 0-45.26zm-116.22 70.97H65.93c1.36-3.84 3.57-7.98 7.43-11.83l13.15-13.15 81.61-81.61 58.61 58.6c12.49 12.49 32.75 12.49 45.24 0 12.49-12.49 12.49-32.75 0-45.24l-58.61-58.6 58.95-58.95 162.45 162.44-48.35 48.34z'%3E%3C/path%3E%3C/svg%3E") 2 18, pointer`
                                     }}
                                 />
                             </div>
