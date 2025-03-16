@@ -180,6 +180,32 @@ const App = () => {
         setSelectedHaircut(null);
     };
 
+    const remixHaircut = async (haircut, e) => {
+        e.stopPropagation(); // Prevent opening the modal
+        
+        // Switch to the draw tab
+        setActiveTab('draw');
+        
+        // Clear the current drawing and description
+        clearCanvas();
+        
+        // Create a temporary image to load the drawing
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+            
+            // Clear canvas first
+            context.fillStyle = 'white';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw the loaded image, fitting it to the canvas
+            context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = haircut.drawingUrl;
+    };
+
     return (
         <div className="container">
             <div className="header">
@@ -315,8 +341,16 @@ const App = () => {
                                 <div className="description-preview">
                                     {haircut.description.substring(0, 100)}...
                                 </div>
-                                <div className="date">
-                                    {new Date(haircut.created_at).toLocaleDateString()}
+                                <div className="button-row">
+                                    <div className="date">
+                                        {new Date(haircut.created_at).toLocaleDateString()}
+                                    </div>
+                                    <button 
+                                        className="remix-btn" 
+                                        onClick={(e) => remixHaircut(haircut, e)}
+                                    >
+                                        <i className="fas fa-sync-alt"></i> Remix
+                                    </button>
                                 </div>
                             </div>
                         </div>
