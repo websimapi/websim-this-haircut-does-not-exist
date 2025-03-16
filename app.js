@@ -48,14 +48,19 @@ const App = () => {
     }, [selectedColor, brushSize]);
 
     const startDrawing = ({ nativeEvent }) => {
-        const { offsetX, offsetY } = nativeEvent;
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
-        const x = (offsetX) * scaleX;
-        const y = (offsetY) * scaleY;
+        let x, y;
+        if (nativeEvent.touches) {
+            x = (nativeEvent.touches[0].clientX - rect.left) * scaleX;
+            y = (nativeEvent.touches[0].clientY - rect.top) * scaleY;
+        } else {
+            x = (nativeEvent.offsetX) * scaleX;
+            y = (nativeEvent.offsetY) * scaleY;
+        }
         
         contextRef.current.beginPath();
         contextRef.current.moveTo(x, y);
@@ -64,14 +69,20 @@ const App = () => {
 
     const draw = ({ nativeEvent }) => {
         if (!isDrawing) return;
-        const { offsetX, offsetY } = nativeEvent;
+        
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
-        const x = (offsetX) * scaleX;
-        const y = (offsetY) * scaleY;
+        let x, y;
+        if (nativeEvent.touches) {
+            x = (nativeEvent.touches[0].clientX - rect.left) * scaleX;
+            y = (nativeEvent.touches[0].clientY - rect.top) * scaleY;
+        } else {
+            x = (nativeEvent.offsetX) * scaleX;
+            y = (nativeEvent.offsetY) * scaleY;
+        }
         
         contextRef.current.lineTo(x, y);
         contextRef.current.stroke();
@@ -249,6 +260,9 @@ const App = () => {
                                     onMouseMove={draw}
                                     onMouseUp={stopDrawing}
                                     onMouseLeave={stopDrawing}
+                                    onTouchStart={startDrawing}
+                                    onTouchMove={draw}
+                                    onTouchEnd={stopDrawing}
                                     style={{ 
                                         width: '100%', 
                                         height: '400px',
