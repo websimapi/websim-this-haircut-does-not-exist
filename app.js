@@ -333,15 +333,7 @@ const App = () => {
         '#ffff00', '#00ffff', '#ff00ff', '#a52a2a', '#808080'
     ];
 
-    const openHaircutModal = (haircut) => {
-        setSelectedHaircut(haircut);
-    };
-
-    const closeModal = () => {
-        setSelectedHaircut(null);
-    };
-
-    const remixHaircut = async (haircut) => {
+    const remixHaircut = (haircut) => {
         try {
             console.log('Starting remix of haircut:', haircut.id);
             console.log('Haircut data:', haircut);
@@ -355,26 +347,35 @@ const App = () => {
             console.log('Parsed vectors data:', vectors);
             
             // Wait for state updates to complete before continuing
-            setActiveTab('draw');
-            setSelectedHaircut(null);
-            setDescription('');
-            setGeneratedImageUrl('');
-            
-            // Use setTimeout to ensure the DOM is updated before we continue
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            setDrawingVectors(vectors);
-            setIsRemixing(true);
-            setRemixSourceHaircut(haircut);
-            
-            // Force redraw after state updates
-            await new Promise(resolve => setTimeout(resolve, 100));
-            redrawVectors();
-            console.log('Canvas redrawn with vectors for remixing');
+            setTimeout(() => {
+                setDrawingVectors(vectors);
+                setIsRemixing(true);
+                setRemixSourceHaircut(haircut);
+                setActiveTab('draw');
+                setSelectedHaircut(null);
+                setDescription('');
+                setGeneratedImageUrl('');
+                
+                // Force redraw after state updates
+                setTimeout(() => {
+                    redrawVectors();
+                    console.log('Canvas redrawn with vectors for remixing');
+                }, 100);
+                
+                console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
+            }, 50);
         } catch (error) {
             console.error('Error remixing haircut:', error);
             alert('Sorry, this haircut cannot be remixed. Error: ' + error.message);
         }
+    };
+
+    const openHaircutModal = (haircut) => {
+        setSelectedHaircut(haircut);
+    };
+
+    const closeModal = () => {
+        setSelectedHaircut(null);
     };
 
     return (
