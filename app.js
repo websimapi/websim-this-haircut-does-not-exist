@@ -11,14 +11,16 @@ const App = () => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [description, setDescription] = useState('');
     const [generatedImageUrl, setGeneratedImageUrl] = useState('');
+    const [analyzerPrompt, setAnalyzerPrompt] = useState('');
+    const [generatorPrompt, setGeneratorPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [selectedHaircut, setSelectedHaircut] = useState(null);
-    const [drawingVectors, setDrawingVectors] = useState([]);
     const [isRemixing, setIsRemixing] = useState(false);
     const [remixSourceHaircut, setRemixSourceHaircut] = useState(null);
+    const [selectedHaircut, setSelectedHaircut] = useState(null);
+    const [drawingVectors, setDrawingVectors] = useState([]);
     
     const canvasRef = useRef(null);
     const contextRef = useRef(null);
@@ -193,6 +195,7 @@ const App = () => {
             }
             
             console.log('Sending analysis request with prompt:', userPrompt);
+            setAnalyzerPrompt(systemPrompt);
             
             const completion = await websim.chat.completions.create({
                 messages: [
@@ -214,8 +217,11 @@ const App = () => {
             
             // Now generate the image
             console.log('Generating haircut image from description');
+            const imagePrompt = `Professional photograph of a person with the following haircut: ${completion.content}. Professional salon photo, high quality, detailed hair texture, salon lighting.`;
+            setGeneratorPrompt(imagePrompt);
+            
             const result = await websim.imageGen({
-                prompt: `Professional photograph of a person with the following haircut: ${completion.content}. Professional salon photo, high quality, detailed hair texture, salon lighting.`,
+                prompt: imagePrompt,
                 aspect_ratio: "1:1"
             });
             
@@ -235,7 +241,10 @@ const App = () => {
                 description: completion.content,
                 drawingUrl,
                 haircutUrl: result.url,
-                vectors: JSON.stringify(drawingVectors)
+                vectors: JSON.stringify(drawingVectors),
+                analyzerPrompt: systemPrompt,
+                generatorPrompt: imagePrompt,
+                userPromptText: typeof userPrompt[0].text === 'string' ? userPrompt[0].text : 'Custom drawing analysis'
             };
             
             // If this is a remix, include the parent haircut info
@@ -536,6 +545,29 @@ const App = () => {
                                     </div>
                                 </div>
                             )}
+                            <div className="prompt-details">
+                                <div className="prompt-section">
+                                    <h3>LLM Prompts</h3>
+                                    {selectedHaircut.userPromptText && (
+                                        <div className="prompt-card">
+                                            <h4>User Prompt</h4>
+                                            <p>{selectedHaircut.userPromptText}</p>
+                                        </div>
+                                    )}
+                                    {selectedHaircut.analyzerPrompt && (
+                                        <div className="prompt-card">
+                                            <h4>Analyzer System Prompt</h4>
+                                            <p>{selectedHaircut.analyzerPrompt}</p>
+                                        </div>
+                                    )}
+                                    {selectedHaircut.generatorPrompt && (
+                                        <div className="prompt-card">
+                                            <h4>Image Generation Prompt</h4>
+                                            <p>{selectedHaircut.generatorPrompt}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                             <div className="description">
                                 <h3>Description</h3>
                                 <p>{selectedHaircut.description}</p>
