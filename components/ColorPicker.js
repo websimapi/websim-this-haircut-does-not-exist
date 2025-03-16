@@ -1,3 +1,6 @@
+import React from 'react';
+const { useState, useEffect, useRef } = React;
+
 const ColorPicker = ({ selectedColor, setSelectedColor }) => {
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState('#000000');
@@ -67,3 +70,5 @@ const ColorPicker = ({ selectedColor, setSelectedColor }) => {
         </div>
     );
 };
+
+export default ColorPicker;

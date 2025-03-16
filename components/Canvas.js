@@ -1,3 +1,6 @@
+import React from 'react';
+const { useState, useEffect, useRef } = React;
+
 const Canvas = ({ 
     selectedColor, 
     brushSize, 
@@ -148,3 +151,5 @@ const Canvas = ({
         </div>
     );
 }
+
+export default Canvas;

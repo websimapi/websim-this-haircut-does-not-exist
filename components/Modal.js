@@ -1,3 +1,5 @@
+import React from 'react';
+
 const Modal = ({ selectedHaircut, closeModal, remixHaircut }) => {
     if (!selectedHaircut) return null;
     
@@ -91,3 +93,4 @@ const Modal = ({ selectedHaircut, closeModal, remixHaircut }) => {
     );
 };
 
+export default Modal;

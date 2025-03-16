@@ -4,11 +4,12 @@ import ReactDOM from 'react-dom';
 const { useState, useEffect, useRef } = React;
 const { createRoot } = ReactDOM;
 
-import ColorPicker from './ColorPicker';
-import Canvas from './Canvas';
-import Gallery from './Gallery';
-import Modal from './Modal';
-import HaircutService from './HaircutService';
+import Canvas from './components/Canvas.js';
+import ColorPicker from './components/ColorPicker.js';
+import Gallery from './components/Gallery.js';
+import Modal from './components/Modal.js';
+import { dataURLtoFile } from './utils/helpers.js';
+import HaircutService from './services/haircutService.js';
 
 // Initialize WebSimSocket connection
 const room = new WebsimSocket();

@@ -96,7 +96,7 @@ const HaircutService = {
             
             console.log('Uploading drawing to storage');
             const drawingUrl = await websim.upload(
-                dataURLtoFile(drawingDataUrl, 'drawing.jpg')
+                HaircutService.dataURLtoFile(drawingDataUrl, 'drawing.jpg')
             );
             console.log('Drawing uploaded, URL:', drawingUrl);
             
@@ -162,3 +162,5 @@ const HaircutService = {
         return new File([u8arr], filename, { type: mime });
     }
 };
+
+export default HaircutService;

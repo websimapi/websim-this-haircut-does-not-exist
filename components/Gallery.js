@@ -1,3 +1,4 @@
+import React from 'react';
 const { useSyncExternalStore } = React;
 
 const Gallery = ({ openHaircutModal, remixHaircut }) => {
@@ -42,3 +43,4 @@ const Gallery = ({ openHaircutModal, remixHaircut }) => {
     );
 };
 
+export default Gallery;
