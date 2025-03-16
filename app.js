@@ -199,10 +199,19 @@ const App = () => {
         // Create a temporary image to load the drawing
         const img = new Image();
         img.crossOrigin = 'Anonymous';
+        
+        // Only attempt to draw the image after it's fully loaded
         img.onload = () => {
-            // Draw the loaded image, fitting it to the canvas
             context.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
+        
+        // Handle image loading errors
+        img.onerror = (err) => {
+            console.error('Error loading image for remix:', err);
+            alert('Error loading the drawing. Please try another one.');
+        };
+        
+        // Set the source after defining the event handlers
         img.src = haircut.drawingUrl;
     };
 
