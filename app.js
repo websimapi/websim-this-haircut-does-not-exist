@@ -35,26 +35,26 @@ const App = () => {
     );
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return; // Early return if canvas isn't available
-        
-        canvas.width = canvasSizeRef.current.width;
-        canvas.height = canvasSizeRef.current.height;
-        
-        const context = canvas.getContext('2d');
-        context.lineCap = 'round';
-        context.strokeStyle = selectedColor;
-        context.lineWidth = brushSize;
-        contextRef.current = context;
-        
-        context.fillStyle = 'white';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // If we're remixing, redraw the previous vectors
-        if (isRemixing && drawingVectors.length > 0) {
-            redrawVectors();
+        if (canvasRef.current) {
+            const canvas = canvasRef.current;
+            canvas.width = canvasSizeRef.current.width;
+            canvas.height = canvasSizeRef.current.height;
+            
+            const context = canvas.getContext('2d');
+            context.lineCap = 'round';
+            context.strokeStyle = selectedColor;
+            context.lineWidth = brushSize;
+            contextRef.current = context;
+            
+            context.fillStyle = 'white';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // If we have vectors, redraw them
+            if (drawingVectors.length > 0) {
+                redrawVectors();
+            }
         }
-    }, [isRemixing, drawingVectors, activeTab]); // Add activeTab as dependency
+    }, [activeTab, isRemixing]);
 
     useEffect(() => {
         if (contextRef.current) {
@@ -78,8 +78,6 @@ const App = () => {
     }, []);
 
     const startDrawing = ({ nativeEvent }) => {
-        if (!canvasRef.current) return; // Early return if canvas isn't available
-        
         const { offsetX, offsetY } = nativeEvent;
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
@@ -105,8 +103,7 @@ const App = () => {
     };
 
     const draw = ({ nativeEvent }) => {
-        if (!isDrawing || !canvasRef.current || !contextRef.current) return;
-        
+        if (!isDrawing) return;
         const { offsetX, offsetY } = nativeEvent;
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
@@ -121,7 +118,6 @@ const App = () => {
         
         // Add point to the current vector
         setDrawingVectors(prev => {
-            if (!prev.length) return prev;
             const updatedVectors = [...prev];
             const currentVector = updatedVectors[updatedVectors.length - 1];
             currentVector.points.push({x, y});
@@ -130,7 +126,6 @@ const App = () => {
     };
 
     const stopDrawing = () => {
-        if (!contextRef.current) return;
         contextRef.current.closePath();
         setIsDrawing(false);
     };
@@ -148,8 +143,6 @@ const App = () => {
     };
 
     const redrawVectors = () => {
-        if (!canvasRef.current || !contextRef.current) return;
-        
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
         
@@ -159,11 +152,11 @@ const App = () => {
         
         // Redraw all vectors
         drawingVectors.forEach(vector => {
-            if (!vector.points || vector.points.length < 2) return;
+            if (vector.points.length < 2) return;
             
             context.beginPath();
-            context.strokeStyle = vector.color || '#000000';
-            context.lineWidth = vector.size || 5;
+            context.strokeStyle = vector.color;
+            context.lineWidth = vector.size;
             
             context.moveTo(vector.points[0].x, vector.points[0].y);
             
@@ -361,27 +354,24 @@ const App = () => {
             const vectors = JSON.parse(haircut.vectors || '[]');
             console.log('Parsed vectors data:', vectors);
             
-            setDrawingVectors(vectors);
-            setIsRemixing(true);
-            setRemixSourceHaircut(haircut);
-            setActiveTab('draw');
-            setSelectedHaircut(null);
-            setDescription('');
-            setGeneratedImageUrl('');
-            
-            // Add a slight delay to ensure the canvas is ready
+            // Wait for state updates to complete before continuing
             setTimeout(() => {
-                if (canvasRef.current) {
-                    const canvas = canvasRef.current;
-                    const context = canvas.getContext('2d');
-                    context.fillStyle = 'white';
-                    context.fillRect(0, 0, canvas.width, canvas.height);
+                setDrawingVectors(vectors);
+                setIsRemixing(true);
+                setRemixSourceHaircut(haircut);
+                setActiveTab('draw');
+                setSelectedHaircut(null);
+                setDescription('');
+                setGeneratedImageUrl('');
+                
+                // Force redraw after state updates
+                setTimeout(() => {
                     redrawVectors();
                     console.log('Canvas redrawn with vectors for remixing');
-                }
-            }, 100);
-            
-            console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
+                }, 100);
+                
+                console.log('Remix setup complete - remixing enabled with source haircut ID:', haircut.id);
+            }, 50);
         } catch (error) {
             console.error('Error remixing haircut:', error);
             alert('Sorry, this haircut cannot be remixed. Error: ' + error.message);
