@@ -21,10 +21,13 @@ const App = () => {
     const [remixSourceHaircut, setRemixSourceHaircut] = useState(null);
     const [selectedHaircut, setSelectedHaircut] = useState(null);
     const [drawingVectors, setDrawingVectors] = useState([]);
+    const [showColorPicker, setShowColorPicker] = useState(false);
+    const [customColor, setCustomColor] = useState('#000000');
     
     const canvasRef = useRef(null);
     const contextRef = useRef(null);
     const canvasSizeRef = useRef({ width: 500, height: 500 });
+    const colorPickerRef = useRef(null);
     
     const haircuts = useSyncExternalStore(
         room.collection('haircut').subscribe,
@@ -57,6 +60,20 @@ const App = () => {
             contextRef.current.lineWidth = brushSize;
         }
     }, [selectedColor, brushSize]);
+
+    // Close color picker when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (colorPickerRef.current && !colorPickerRef.current.contains(event.target)) {
+                setShowColorPicker(false);
+            }
+        }
+        
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     const startDrawing = ({ nativeEvent }) => {
         const { offsetX, offsetY } = nativeEvent;
@@ -147,6 +164,20 @@ const App = () => {
             
             context.stroke();
         });
+    };
+
+    const handleCustomColorChange = (e) => {
+        setCustomColor(e.target.value);
+    };
+
+    const applyCustomColor = () => {
+        setSelectedColor(customColor);
+        setShowColorPicker(false);
+    };
+
+    const toggleColorPicker = (e) => {
+        e.stopPropagation();
+        setShowColorPicker(!showColorPicker);
     };
 
     const analyzeAndGenerateHaircut = async () => {
@@ -398,6 +429,24 @@ const App = () => {
                                             onClick={() => setSelectedColor(color)}
                                         />
                                     ))}
+                                    <div ref={colorPickerRef} style={{ position: 'relative' }}>
+                                        <div 
+                                            className={`rainbow-color-picker ${selectedColor !== '#000000' && !colorOptions.includes(selectedColor) ? 'selected' : ''}`}
+                                            onClick={toggleColorPicker}
+                                        />
+                                        {showColorPicker && (
+                                            <div className="color-picker-popup">
+                                                <input 
+                                                    type="color" 
+                                                    value={customColor}
+                                                    onChange={handleCustomColorChange}
+                                                />
+                                                <div className="custom-color-input">
+                                                    <button onClick={applyCustomColor}>Apply Color</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         
