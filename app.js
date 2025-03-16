@@ -82,8 +82,17 @@ const App = () => {
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
-        const x = (offsetX) * scaleX;
-        const y = (offsetY) * scaleY;
+        let x, y;
+        
+        // Handle different event types (touch vs mouse)
+        if (nativeEvent.type === 'touchstart') {
+            const touch = nativeEvent.touches[0];
+            x = (touch.clientX - rect.left) * scaleX;
+            y = (touch.clientY - rect.top) * scaleY;
+        } else {
+            x = offsetX * scaleX;
+            y = offsetY * scaleY;
+        }
         
         contextRef.current.beginPath();
         contextRef.current.moveTo(x, y);
@@ -102,14 +111,25 @@ const App = () => {
 
     const draw = ({ nativeEvent }) => {
         if (!isDrawing) return;
-        const { offsetX, offsetY } = nativeEvent;
+        
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
-        const x = (offsetX) * scaleX;
-        const y = (offsetY) * scaleY;
+        let x, y;
+        
+        // Handle different event types (touch vs mouse)
+        if (nativeEvent.type === 'touchmove') {
+            nativeEvent.preventDefault(); // Prevent scrolling on touch devices
+            const touch = nativeEvent.touches[0];
+            x = (touch.clientX - rect.left) * scaleX;
+            y = (touch.clientY - rect.top) * scaleY;
+        } else {
+            const { offsetX, offsetY } = nativeEvent;
+            x = offsetX * scaleX;
+            y = offsetY * scaleY;
+        }
         
         contextRef.current.lineTo(x, y);
         contextRef.current.stroke();
@@ -117,9 +137,12 @@ const App = () => {
         // Add point to the current vector
         setDrawingVectors(prev => {
             const updatedVectors = [...prev];
-            const currentVector = updatedVectors[updatedVectors.length - 1];
-            currentVector.points.push({x, y});
-            return updatedVectors;
+            if (updatedVectors.length > 0) {
+                const currentVector = updatedVectors[updatedVectors.length - 1];
+                currentVector.points.push({x, y});
+                return updatedVectors;
+            }
+            return prev;
         });
     };
 
@@ -457,6 +480,9 @@ const App = () => {
                                     onMouseMove={draw}
                                     onMouseUp={stopDrawing}
                                     onMouseLeave={stopDrawing}
+                                    onTouchStart={startDrawing}
+                                    onTouchMove={draw}
+                                    onTouchEnd={stopDrawing}
                                     style={{ 
                                         width: '100%', 
                                         height: '400px',
