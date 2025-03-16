@@ -201,7 +201,7 @@ const App = () => {
         context.fillStyle = 'white';
         context.fillRect(0, 0, context.canvas.width, context.canvas.height);
         
-        // Render each stroke
+        // Render each stroke at original scale (no scaling adjustments)
         data.forEach(stroke => {
             if (stroke.type === 'stroke' && stroke.points.length > 0) {
                 context.beginPath();
@@ -210,11 +210,13 @@ const App = () => {
                 context.lineCap = 'round';
                 
                 // Move to first point
-                context.moveTo(stroke.points[0].x, stroke.points[0].y);
+                const firstPoint = stroke.points[0];
+                context.moveTo(firstPoint.x, firstPoint.y);
                 
                 // Draw lines to all other points
                 for (let i = 1; i < stroke.points.length; i++) {
-                    context.lineTo(stroke.points[i].x, stroke.points[i].y);
+                    const point = stroke.points[i];
+                    context.lineTo(point.x, point.y);
                 }
                 
                 context.stroke();
@@ -237,15 +239,17 @@ const App = () => {
             const context = canvas.getContext('2d');
             
             // Clear the current drawing and description
-            context.fillStyle = 'white';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            setDescription('');
-            setGeneratedImageUrl('');
+            clearCanvas();
             
             // Load the vector drawing data
-            if (haircut.drawingData) {
+            if (haircut.drawingData && haircut.drawingData.length > 0) {
                 renderDrawingData(context, haircut.drawingData);
                 setDrawingData(haircut.drawingData);
+                
+                // Make sure context is properly set for future drawing
+                context.strokeStyle = selectedColor;
+                context.lineWidth = brushSize;
+                context.lineCap = 'round';
             } else if (haircut.drawingUrl) {
                 // Fallback for old data that only has image URL
                 const img = new Image();
